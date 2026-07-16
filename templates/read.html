@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book }} — Детальний огляд</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+
+<div class="full-width-section">
+    <div class="result-inner">
+
+        <a class="back-link" href="{{ url_for('overview_book', book=book) }}">← Огляд книги</a>
+
+        <h1>📖 {{ book }}</h1>
+        <p class="subtitle">Детальний огляд — повний текст книги</p>
+
+        <p class="intro-text">
+            Перед тобою повний текст книги «{{ book }}». Клікни на будь-яке слово,
+            щоб обрати для нього колір і позначити ключовим — усі однакові слова
+            в усьому тексті одразу пофарбуються тим самим кольором (наприклад,
+            обравши слово «Бог» синім, ти побачиш синім кожне «Бог» у книзі).
+            Під кожною групою ключових слів праворуч зʼявиться поле для нотаток і висновку.
+        </p>
+
+        <div id="read-status" class="intro-text">Завантажуємо текст книги...</div>
+
+        <div class="split-layout">
+            <div class="text-panel">
+                <div id="result" class="clickable-text"></div>
+            </div>
+
+            <div class="notes-panel">
+
+                <div class="overview-panel">
+                    <h3 class="notes-panel-title">1. Огляд книги</h3>
+                    <p class="notes-field-hint">
+                        Заповни власними висновками з тексту — це і є твій загальний
+                        огляд книги «{{ book }}».
+                    </p>
+
+                    <div class="notes-field">
+                        <h4 class="notes-field-subtitle">Хто автор</h4>
+                        <p class="notes-field-hint">Випиши все, що можеш дізнатися про автора з тексту книги</p>
+                        <textarea id="ov-author" class="notes-textarea" placeholder="Що текст каже про автора...">{{ saved_notes.author or "" }}</textarea>
+                    </div>
+
+                    <div class="notes-field">
+                        <h4 class="notes-field-subtitle">Отримувачі</h4>
+                        <p class="notes-field-hint">Кому адресована книга — випиши все, що дізнаєшся про них з тексту</p>
+                        <textarea id="ov-recipients" class="notes-textarea" placeholder="Що текст каже про отримувачів...">{{ saved_notes.recipients or "" }}</textarea>
+                    </div>
+
+                    <div class="notes-field">
+                        <h4 class="notes-field-subtitle">Ціль написання</h4>
+                        <p class="notes-field-hint">Навіщо автор написав цю книгу?</p>
+                        <textarea id="ov-purpose" class="notes-textarea">{{ saved_notes.purpose or "" }}</textarea>
+                    </div>
+
+                    <div class="notes-field">
+                        <h4 class="notes-field-subtitle">Головна думка (ідея) книги</h4>
+                        <p class="notes-field-hint">Що автор хотів донести читачам?</p>
+                        <textarea id="ov-main-idea" class="notes-textarea">{{ saved_notes.main_idea or "" }}</textarea>
+                    </div>
+
+                    <div class="notes-field">
+                        <h4 class="notes-field-subtitle">Ключовий вірш книги</h4>
+                        <p class="notes-field-hint">Вірш, який найкраще відображає тему книги</p>
+                        <textarea id="ov-key-verse" class="notes-textarea">{{ saved_notes.key_verse or "" }}</textarea>
+                    </div>
+
+                    <div class="notes-field">
+                        <h4 class="notes-field-subtitle">Тема книги</h4>
+                        <textarea id="ov-theme" class="notes-textarea">{{ saved_notes.theme or "" }}</textarea>
+                    </div>
+
+                    <div id="overview-save-message" class="success-message" style="display:none"></div>
+                    <div id="overview-save-error" class="error-message" style="display:none"></div>
+
+                    <button type="button" onclick="saveOverviewNotes()">💾 Зберегти огляд книги</button>
+                </div>
+
+                <div class="excerpt-panel">
+                    <h3 class="notes-panel-title">2. Тематичні уривки</h3>
+                    <p class="notes-field-hint">
+                        Познач межі уривка за розділом і віршем (наприклад: 1:1 – 3:20),
+                        щоб потім відкривати саме цю частину книги окремо — з тими самими
+                        кольоровими позначками, нотатками й висновками.
+                    </p>
+
+                    <div id="excerpt-list"></div>
+
+                    <button type="button" class="secondary-btn" onclick="addExcerptRow()">+ Додати уривок</button>
+                    <button type="button" onclick="saveExcerpts()">Зберегти уривки</button>
+
+                    <div id="excerpt-save-message" class="success-message" style="display:none"></div>
+                    <div id="excerpt-save-error" class="error-message" style="display:none"></div>
+
+                    <div id="saved-excerpts-list"></div>
+                </div>
+
+                <div id="keyword-notes"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="loading-toast" id="loading-toast">
+    <div class="spinner" role="status" aria-label="loading">
+        <span class="sr-only">Завантаження...</span>
+    </div>
+    <p>Завантажуємо повний текст книги...</p>
+</div>
+
+<script src="/static/script.js"></script>
+<script>
+    const TOTAL_CHAPTERS = {{ total_chapters }};
+    const SAVED_EXCERPTS = {{ saved_excerpts | tojson }};
+
+    function escapeHtmlLocal(str){
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    async function saveOverviewNotes(){
+        let msgEl = document.getElementById("overview-save-message");
+        let errEl = document.getElementById("overview-save-error");
+        msgEl.style.display = "none";
+        errEl.style.display = "none";
+
+        let payload = {
+            author: document.getElementById("ov-author").value,
+            recipients: document.getElementById("ov-recipients").value,
+            purpose: document.getElementById("ov-purpose").value,
+            main_idea: document.getElementById("ov-main-idea").value,
+            key_verse: document.getElementById("ov-key-verse").value,
+            theme: document.getElementById("ov-theme").value
+        };
+
+        try {
+            let response = await fetch("{{ url_for('save_overview', book=book) }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            let data = await response.json();
+
+            if(!response.ok){
+                errEl.textContent = data.error || "Не вдалося зберегти огляд книги";
+                errEl.style.display = "block";
+                return;
+            }
+
+            msgEl.textContent = data.message;
+            msgEl.style.display = "block";
+
+            if(data.content){
+                downloadTextFile(data.filename, data.content);
+            }
+
+        } catch (err) {
+            errEl.textContent = "Помилка з'єднання із сервером. Спробуйте ще раз.";
+            errEl.style.display = "block";
+        }
+    }
+
+    function addExcerptRow(title, chFrom, vFrom, chTo, vTo){
+        let list = document.getElementById("excerpt-list");
+        let row = document.createElement("div");
+        row.className = "excerpt-row";
+        row.innerHTML = `
+            <input type="text" class="excerpt-title" placeholder="Назва уривка" value="${title ? escapeHtmlLocal(title) : ""}">
+            <div class="excerpt-range">
+                <div class="excerpt-range-bound">
+                    <span class="excerpt-bound-label">Від</span>
+                    <div class="excerpt-field">
+                        <span class="excerpt-field-label">розділ</span>
+                        <input type="number" class="excerpt-ch-from" min="1" max="${TOTAL_CHAPTERS}" value="${chFrom || 1}" title="розділ від">
+                    </div>
+                    <span class="excerpt-sep">:</span>
+                    <div class="excerpt-field">
+                        <span class="excerpt-field-label">вірш</span>
+                        <input type="number" class="excerpt-v-from" min="1" value="${vFrom || 1}" title="вірш від">
+                    </div>
+                </div>
+                <div class="excerpt-range-bound">
+                    <span class="excerpt-bound-label">До</span>
+                    <div class="excerpt-field">
+                        <span class="excerpt-field-label">розділ</span>
+                        <input type="number" class="excerpt-ch-to" min="1" max="${TOTAL_CHAPTERS}" value="${chTo || chFrom || 1}" title="розділ до">
+                    </div>
+                    <span class="excerpt-sep">:</span>
+                    <div class="excerpt-field">
+                        <span class="excerpt-field-label">вірш</span>
+                        <input type="number" class="excerpt-v-to" min="1" value="${vTo || 99}" title="вірш до">
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="excerpt-remove" onclick="this.parentElement.remove()">✕ Прибрати уривок</button>
+        `;
+        list.appendChild(row);
+    }
+
+    function renderSavedExcerpts(list){
+        let container = document.getElementById("saved-excerpts-list");
+        if(!list || list.length === 0){
+            container.innerHTML = "";
+            return;
+        }
+        let startHref = "/overview/{{ book|urlencode }}/excerpt/1";
+        let startBtn = `<a class="excerpt-start-link" href="${startHref}">▶ Почати послідовне проходження з уривка 1</a>`;
+        let list_html = list.map((ex, i) => {
+            let range = `${ex.chapter_from}:${ex.verse_from}–${ex.chapter_to}:${ex.verse_to}`;
+            let href = "/overview/{{ book|urlencode }}/excerpt/" + (i + 1);
+            return `<a class="excerpt-link" href="${href}">${i + 1}. ${escapeHtmlLocal(ex.title)} (${range})</a>`;
+        }).join("");
+        container.innerHTML = startBtn + "<p class=\"notes-field-hint\">Збережені уривки:</p>" + list_html;
+    }
+
+    if(SAVED_EXCERPTS && SAVED_EXCERPTS.length > 0){
+        SAVED_EXCERPTS.forEach(ex => addExcerptRow(ex.title, ex.chapter_from, ex.verse_from, ex.chapter_to, ex.verse_to));
+        renderSavedExcerpts(SAVED_EXCERPTS);
+    } else {
+        addExcerptRow();
+    }
+
+    async function saveExcerpts(){
+        let msgEl = document.getElementById("excerpt-save-message");
+        let errEl = document.getElementById("excerpt-save-error");
+        msgEl.style.display = "none";
+        errEl.style.display = "none";
+
+        let rows = document.querySelectorAll("#excerpt-list .excerpt-row");
+        let excerpts = [];
+        rows.forEach(row => {
+            let title = row.querySelector(".excerpt-title").value.trim();
+            let chFrom = parseInt(row.querySelector(".excerpt-ch-from").value) || 1;
+            let vFrom = parseInt(row.querySelector(".excerpt-v-from").value) || 1;
+            let chTo = parseInt(row.querySelector(".excerpt-ch-to").value) || chFrom;
+            let vTo = parseInt(row.querySelector(".excerpt-v-to").value) || 999;
+            if(title){
+                excerpts.push({ title: title, chapter_from: chFrom, verse_from: vFrom, chapter_to: chTo, verse_to: vTo });
+            }
+        });
+
+        if(excerpts.length === 0){
+            errEl.textContent = "Додай хоча б один уривок — назву й межі";
+            errEl.style.display = "block";
+            return;
+        }
+
+        try {
+            let response = await fetch("{{ url_for('save_excerpts', book=book) }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ excerpts: excerpts })
+            });
+
+            let data = await response.json();
+
+            if(!response.ok){
+                errEl.textContent = data.error || "Не вдалося зберегти уривки";
+                errEl.style.display = "block";
+                return;
+            }
+
+            msgEl.textContent = data.message;
+            msgEl.style.display = "block";
+            renderSavedExcerpts(data.excerpts);
+
+            if(data.content){
+                downloadTextFile(data.filename, data.content);
+            }
+
+        } catch (err) {
+            errEl.textContent = "Помилка з'єднання із сервером. Спробуйте ще раз.";
+            errEl.style.display = "block";
+        }
+    }
+
+    async function loadFullBook(){
+        let toast = document.getElementById("loading-toast");
+        let status = document.getElementById("read-status");
+        let resultDiv = document.getElementById("result");
+
+        toast.classList.add("show");
+        resultDiv.innerHTML = "";
+
+        try {
+            let response = await fetch("{{ url_for('full_text', book=book) }}");
+            let data = await response.json();
+
+            if(!response.ok || data.error){
+                status.textContent = data.error || "Не вдалося завантажити текст книги";
+                toast.classList.remove("show");
+                return;
+            }
+
+            let frag = document.createDocumentFragment();
+
+            data.chapters.forEach(ch => {
+                let heading = document.createElement("h2");
+                heading.className = "chapter-heading";
+                heading.textContent = "Розділ " + ch.chapter;
+                frag.appendChild(heading);
+
+                ch.verses.forEach(v => {
+                    let line = document.createElement("div");
+                    line.className = "verse-line";
+                    line.innerHTML = `<span class="verse-num">${v.number}.</span>` + highlightWords(v.text);
+                    frag.appendChild(line);
+                });
+            });
+
+            resultDiv.appendChild(frag);
+            buildWordIndex();
+            status.style.display = "none";
+
+        } catch (err) {
+            status.textContent = "Помилка з'єднання із сервером. Спробуйте ще раз.";
+        }
+
+        toast.classList.remove("show");
+    }
+
+    loadFullBook();
+</script>
+
+</body>
+</html>

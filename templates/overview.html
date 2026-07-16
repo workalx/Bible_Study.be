@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пошук біблійного тексту</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+
+<div class="container">
+
+    <div id="form-section">
+        <a class="back-link" href="/overview">← Загальний огляд</a>
+
+        <h1>📖 Пошук біблійного тексту</h1>
+        <p class="subtitle">Знайдіть будь-який вірш за секунди</p>
+
+        <form id="search-form" autocomplete="on">
+            <label for="book">Книга</label>
+            <select id="book" name="book" autocomplete="off">
+                {% for name in book_order %}
+                <option {% if name == selected_book %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="chapter">Розділ</label>
+            <input type="number" id="chapter" name="chapter" placeholder="Наприклад: 3" autocomplete="off">
+
+            <label for="verse">Вірш</label>
+            <input type="number" id="verse" name="verse" placeholder="Наприклад: 16" autocomplete="off">
+
+            <label for="verse-to">По вірш (необов'язково)</label>
+            <input type="number" id="verse-to" name="verse-to" placeholder="Наприклад: 20" autocomplete="off">
+
+            <button type="button" onclick="getVerse()">
+                Отримати текст
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<div class="loading-toast" id="loading-toast">
+    <div class="spinner" role="status" aria-label="loading">
+        <span class="sr-only">Завантаження...</span>
+    </div>
+    <p>Знаходимо вірші для вивчення...</p>
+</div>
+
+<div id="result-section" class="full-width-section" style="display:none">
+    <div class="result-inner">
+        <button class="back-btn" onclick="showForm()">← Назад</button>
+
+        <div class="split-layout">
+            <div class="text-panel">
+                <div id="result" class="clickable-text"></div>
+            </div>
+
+            <div class="notes-panel">
+                <div id="keyword-notes"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/script.js"></script>
+
+</body>
+</html>

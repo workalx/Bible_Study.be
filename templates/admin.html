@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Адмін-панель — Вивчення Біблії</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+
+<div class="container admin-container">
+
+    <div class="admin-header">
+        <div>
+            <h1>🛠️ Адмін-панель</h1>
+            <p class="subtitle">Статистика застосунку «парс Біблія»</p>
+        </div>
+        <div class="books-header-links">
+            <a class="logout-link" href="{{ url_for('overview') }}">← До книг</a>
+            <a class="logout-link" href="/logout">Вийти</a>
+        </div>
+    </div>
+
+    {% if deleted_user %}
+    <div class="success-message">Користувача «{{ deleted_user }}» видалено разом з усіма його даними.</div>
+    {% endif %}
+    {% if delete_error %}
+    <div class="error-message">{{ delete_error }}</div>
+    {% endif %}
+
+    <div class="admin-tabs">
+        <button type="button" class="admin-tab-btn active" data-tab="overview" onclick="showAdminTab('overview')">📊 Огляд</button>
+        <button type="button" class="admin-tab-btn" data-tab="users" onclick="showAdminTab('users')">👥 Користувачі</button>
+        <button type="button" class="admin-tab-btn" data-tab="books" onclick="showAdminTab('books')">📚 Книги</button>
+    </div>
+
+    <!-- ==================== ОГЛЯД ==================== -->
+    <div class="admin-panel" id="tab-overview">
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_users }}</div>
+                <div class="stat-label">Зареєстровано користувачів</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">+{{ new_users_7d }}</div>
+                <div class="stat-label">Нових за 7 днів</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ users_studying }}</div>
+                <div class="stat-label">Активно вивчають книги</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_books_in_progress }}</div>
+                <div class="stat-label">Книг у процесі вивчення</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_visits }}</div>
+                <div class="stat-label">Відвідувань сторінок всього</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ unique_visitors }}</div>
+                <div class="stat-label">Унікальних відвідувачів</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ visits_today }}</div>
+                <div class="stat-label">Відвідувань сьогодні</div>
+            </div>
+        </div>
+
+        <h2 class="testament-title">Відвідування за останні 14 днів</h2>
+        <div class="chart-wrap">
+            {% for point in visits_chart %}
+            <div class="chart-bar" title="{{ point.label }}: {{ point.count }}">
+                <div class="chart-bar-fill" style="height: {{ point.pct }}%;"></div>
+                <div class="chart-bar-count">{{ point.count }}</div>
+                <div class="chart-bar-label">{{ point.label }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="admin-columns">
+            <div>
+                <h2 class="testament-title">Останні реєстрації</h2>
+                {% if recent_users %}
+                <div class="recent-list">
+                    {% for u in recent_users %}
+                    <div class="recent-item">
+                        <span class="admin-username">{{ u.username }}</span>
+                        <span class="admin-book-meta">{{ u.registered_at }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="admin-empty">Ще немає користувачів</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <h2 class="testament-title">Топ книг за популярністю</h2>
+                {% if book_stats %}
+                <div class="recent-list">
+                    {% for b in book_stats[:5] %}
+                    <div class="recent-item">
+                        <span class="admin-book-name">{{ b.book }}</span>
+                        <span class="admin-book-meta">{{ b.users }} {{ "користувач" if b.users == 1 else "користувачів" }} · уривків: {{ b.excerpts }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="admin-empty">Ще ніхто не почав вивчати жодну книгу</p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ==================== КОРИСТУВАЧІ ==================== -->
+    <div class="admin-panel" id="tab-users" style="display:none">
+
+        <input
+            type="text"
+            id="user-search"
+            class="admin-search"
+            placeholder="Пошук за логіном..."
+            oninput="filterAdminUsers(this.value)"
+        >
+
+        <div class="admin-table-wrap">
+            <table class="admin-table" id="users-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="text" onclick="sortAdminTable(0, this)">Користувач ⇅</th>
+                        <th class="sortable" data-sort="number" onclick="sortAdminTable(1, this)">Зареєстрований ⇅</th>
+                        <th class="sortable" data-sort="number" onclick="sortAdminTable(2, this)">Останній вхід ⇅</th>
+                        <th class="sortable" data-sort="number" onclick="sortAdminTable(3, this)">Книг ⇅</th>
+                        <th>Що вивчає</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in user_rows %}
+                    <tr data-username="{{ row.username|lower }}">
+                        <td data-value="{{ row.username|lower }}">
+                            <span class="admin-username">{{ row.username }}</span>
+                            {% if row.is_admin %}<span class="admin-badge">Admin</span>{% endif %}
+                        </td>
+                        <td data-value="{{ row.registered_sort }}">{{ row.registered_at }}</td>
+                        <td data-value="{{ row.last_login_sort }}">{{ row.last_login }}</td>
+                        <td data-value="{{ row.books_count }}">{{ row.books_count }}</td>
+                        <td>
+                            {% if row.books %}
+                            <div class="admin-books-list">
+                                {% for b in row.books %}
+                                <div class="admin-book-tag">
+                                    <span class="admin-book-name">{{ b.book }}</span>
+                                    <span class="admin-book-meta">
+                                        уривків: {{ b.excerpts }}{% if b.has_overview %} · огляд заповнено{% endif %}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="admin-empty">ще не почав(-ла)</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not row.is_admin %}
+                            <form method="post" action="{{ url_for('admin_delete_user', username=row.username) }}"
+                                  onsubmit="return confirm('Видалити користувача «{{ row.username }}» і всі його дані? Цю дію не можна скасувати.');">
+                                <button type="submit" class="delete-btn">Видалити</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="admin-empty" id="no-users-found" style="display:none">Нічого не знайдено</p>
+
+    </div>
+
+    <!-- ==================== КНИГИ ==================== -->
+    <div class="admin-panel" id="tab-books" style="display:none">
+
+        <h2 class="testament-title">Популярність книг</h2>
+
+        {% if book_stats %}
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Книга</th>
+                        <th>Користувачів вивчає</th>
+                        <th>Уривків визначено (сумарно)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in book_stats %}
+                    <tr>
+                        <td class="admin-book-name">{{ b.book }}</td>
+                        <td>{{ b.users }}</td>
+                        <td>{{ b.excerpts }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="admin-empty">Ще ніхто не почав вивчати жодну книгу</p>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<script>
+    function showAdminTab(name){
+        document.querySelectorAll(".admin-panel").forEach(p => p.style.display = "none");
+        document.getElementById("tab-" + name).style.display = "block";
+        document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelector('.admin-tab-btn[data-tab="' + name + '"]').classList.add("active");
+    }
+
+    function filterAdminUsers(query){
+        query = (query || "").trim().toLowerCase();
+        let rows = document.querySelectorAll("#users-table tbody tr");
+        let visibleCount = 0;
+        rows.forEach(row => {
+            let match = row.dataset.username.includes(query);
+            row.style.display = match ? "" : "none";
+            if(match) visibleCount++;
+        });
+        document.getElementById("no-users-found").style.display = visibleCount === 0 ? "block" : "none";
+    }
+
+    let adminSortState = {};
+
+    function sortAdminTable(colIndex, th){
+        let table = document.getElementById("users-table");
+        let tbody = table.querySelector("tbody");
+        let rows = Array.from(tbody.querySelectorAll("tr"));
+        let type = th.dataset.sort;
+
+        let asc = !(adminSortState[colIndex] === "asc");
+        adminSortState = {};
+        adminSortState[colIndex] = asc ? "asc" : "desc";
+
+        rows.sort((a, b) => {
+            let av = a.children[colIndex].dataset.value;
+            let bv = b.children[colIndex].dataset.value;
+            if(type === "number"){
+                av = parseFloat(av) || 0;
+                bv = parseFloat(bv) || 0;
+                return asc ? av - bv : bv - av;
+            }
+            av = (av || "").toString();
+            bv = (bv || "").toString();
+            return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загальний огляд — Вивчення Біблії</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+
+<div class="container books-container">
+
+    <div class="books-header">
+        <div>
+            <h1>📖 Загальний огляд</h1>
+            <p class="subtitle">Привіт, {{ username }}! Обери книгу, яку хочеш вивчати</p>
+        </div>
+        <div class="books-header-links">
+            {% if is_admin %}
+            <a class="logout-link" href="{{ url_for('admin_dashboard') }}">Адмін-панель</a>
+            {% endif %}
+            <a class="logout-link" href="/logout">Вийти</a>
+        </div>
+    </div>
+
+    <h2 class="testament-title">Старий Заповіт</h2>
+    <div class="book-grid">
+        {% for name in ot_books %}
+        <a class="book-item" href="{{ url_for('overview_book', book=name) }}">{{ name }}</a>
+        {% endfor %}
+    </div>
+
+    <h2 class="testament-title">Новий Заповіт</h2>
+    <div class="book-grid">
+        {% for name in nt_books %}
+        <a class="book-item" href="{{ url_for('overview_book', book=name) }}">{{ name }}</a>
+        {% endfor %}
+    </div>
+
+</div>
+
+</body>
+</html>

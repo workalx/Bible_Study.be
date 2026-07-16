@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book }} — Нотатки дослідження</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+
+<div class="container intro-container">
+
+    <a class="back-link" href="{{ url_for('overview_book', book=book) }}">← Огляд книги</a>
+
+    <h1>📖 {{ book }}</h1>
+    <p class="subtitle">Нотатки дослідження — запиши власні висновки</p>
+
+    <div class="notes-field">
+        <h3 class="notes-field-title">Хто автор</h3>
+        <p class="notes-field-hint">Випиши все, що можеш дізнатися про автора з тексту книги</p>
+        <textarea id="author" class="notes-textarea" placeholder="Що текст каже про автора..."></textarea>
+    </div>
+
+    <div class="notes-field">
+        <h3 class="notes-field-title">Отримувачі</h3>
+        <p class="notes-field-hint">Кому адресована книга — випиши все, що дізнаєшся про них з тексту</p>
+        <textarea id="recipients" class="notes-textarea" placeholder="Що текст каже про отримувачів..."></textarea>
+    </div>
+
+    <div class="notes-field">
+        <h3 class="notes-field-title">Ціль написання</h3>
+        <p class="notes-field-hint">Навіщо автор написав цю книгу?</p>
+        <textarea id="purpose" class="notes-textarea"></textarea>
+    </div>
+
+    <div class="notes-field">
+        <h3 class="notes-field-title">Головна думка (ідея) книги</h3>
+        <p class="notes-field-hint">Що автор хотів донести читачам?</p>
+        <textarea id="main_idea" class="notes-textarea"></textarea>
+    </div>
+
+    <div class="notes-field">
+        <h3 class="notes-field-title">Ключовий вірш книги</h3>
+        <p class="notes-field-hint">Вірш, який найкраще відображає тему книги</p>
+        <textarea id="key_verse" class="notes-textarea"></textarea>
+    </div>
+
+    <div class="notes-field">
+        <h3 class="notes-field-title">Тема книги</h3>
+        <textarea id="theme" class="notes-textarea"></textarea>
+    </div>
+
+    <div id="save-message" class="success-message" style="display:none"></div>
+    <div id="save-error" class="error-message" style="display:none"></div>
+
+    <button type="button" onclick="saveOverview()">💾 Зберегти дослідження на пристрій</button>
+
+    <button type="button" onclick="goToText()">Детальний огляд →</button>
+
+</div>
+
+<script>
+    async function saveOverview(){
+        let payload = {
+            author: document.getElementById("author").value,
+            recipients: document.getElementById("recipients").value,
+            purpose: document.getElementById("purpose").value,
+            main_idea: document.getElementById("main_idea").value,
+            key_verse: document.getElementById("key_verse").value,
+            theme: document.getElementById("theme").value
+        };
+
+        let msgEl = document.getElementById("save-message");
+        let errEl = document.getElementById("save-error");
+        msgEl.style.display = "none";
+        errEl.style.display = "none";
+
+        try {
+            let response = await fetch("{{ url_for('save_overview', book=book) }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            let data = await response.json();
+
+            if(!response.ok){
+                errEl.textContent = data.error || "Не вдалося зберегти файл";
+                errEl.style.display = "block";
+                return false;
+            }
+
+            msgEl.textContent = data.message;
+            msgEl.style.display = "block";
+            return true;
+
+        } catch (err) {
+            errEl.textContent = "Помилка з'єднання із сервером. Спробуйте ще раз.";
+            errEl.style.display = "block";
+            return false;
+        }
+    }
+
+    async function goToText(){
+        await saveOverview();
+        window.location.href = "{{ url_for('read_book', book=book) }}";
+    }
+</script>
+
+</body>
+</html>

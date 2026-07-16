@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book }} — Загальний огляд</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+
+<div class="container intro-container">
+
+    <a class="back-link" href="/overview">← Усі книги</a>
+
+    <h1>📖 {{ book }}</h1>
+    <p class="subtitle">Загальний огляд книги</p>
+
+    <p class="intro-text">
+        Перш ніж занурюватись у вірші книги «{{ book }}» вірш за віршем, зроби її
+        <strong>загальний огляд</strong>: прочитай книгу повністю хоча б один раз.
+        Це схоже на те, щоб побачити ліс, перш ніж роздивлятися кожне дерево —
+        так легше зрозуміти задум і контекст кожного окремого вірша.
+    </p>
+
+    <p class="intro-text">Під час першого читання зверни увагу на:</p>
+
+    <div class="intro-steps">
+
+        <div class="intro-step">
+            <span class="intro-step-num">1</span>
+            <div>
+                <h3 class="intro-step-title">Спостереження</h3>
+                <p class="intro-step-text">
+                    Хто автор і кому адресована книга «{{ book }}»? Які головні дійові
+                    особи повторюються? Які теми і слова зустрічаються найчастіше?
+                    Як книга поділяється на смислові частини?
+                </p>
+            </div>
+        </div>
+
+        <div class="intro-step">
+            <span class="intro-step-num">2</span>
+            <div>
+                <h3 class="intro-step-title">Тлумачення</h3>
+                <p class="intro-step-text">
+                    Яку головну думку автор хотів донести первісним читачам? Що в тексті
+                    залишається незмінною істиною для будь-якого часу й культури?
+                </p>
+            </div>
+        </div>
+
+        <div class="intro-step">
+            <span class="intro-step-num">3</span>
+            <div>
+                <h3 class="intro-step-title">Застосування</h3>
+                <p class="intro-step-text">
+                    Що ця книга каже особисто тобі сьогодні? Тримай це запитання
+                    у голові — до нього ти повернешся вже під час детального
+                    вивчення окремих віршів.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <p class="intro-text">
+        Коли загальна картина книги «{{ book }}» стане зрозумілою — переходь до
+        детального огляду, щоб дослідити конкретні розділи та вірші, позначити
+        ключові слова кольором і залишити нотатки.
+    </p>
+
+    <button type="button" onclick="window.location.href='{{ url_for('read_book', book=book) }}'">
+        Детальний огляд →
+    </button>
+
+</div>
+
+</body>
+</html>

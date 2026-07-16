@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вхід — Вивчення Біблії</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+
+<div class="container">
+
+    <h1>🔑 Майже готово</h1>
+    <p class="subtitle">Зареєструйся, щоб зберігати свої нотатки та позначені ключові слова</p>
+
+    <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tab-register" onclick="setMode('register')">
+            Реєстрація
+        </button>
+        <button type="button" class="auth-tab" id="tab-login" onclick="setMode('login')">
+            Вхід
+        </button>
+    </div>
+
+    {% if error %}
+    <p class="error-message">{{ error }}</p>
+    {% endif %}
+
+    <form id="auth-form" method="POST" action="/register" autocomplete="on">
+
+        <input type="hidden" name="action" id="action-input" value="register">
+
+        <label for="username">Логін</label>
+        <input type="text" id="username" name="username" placeholder="Наприклад: ivan" autocomplete="username" required>
+
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" placeholder="Мінімум 4 символи" autocomplete="new-password" required>
+
+        <button type="submit" id="submit-btn">Зареєструватися →</button>
+    </form>
+
+</div>
+
+<script>
+    function setMode(mode){
+        let tabRegister = document.getElementById("tab-register");
+        let tabLogin = document.getElementById("tab-login");
+        let actionInput = document.getElementById("action-input");
+        let submitBtn = document.getElementById("submit-btn");
+        let passwordInput = document.getElementById("password");
+
+        if(mode === "login"){
+            tabLogin.classList.add("active");
+            tabRegister.classList.remove("active");
+            actionInput.value = "login";
+            submitBtn.textContent = "Увійти →";
+            passwordInput.autocomplete = "current-password";
+        } else {
+            tabRegister.classList.add("active");
+            tabLogin.classList.remove("active");
+            actionInput.value = "register";
+            submitBtn.textContent = "Зареєструватися →";
+            passwordInput.autocomplete = "new-password";
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book }} — {{ excerpt_title }}</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+
+<div class="full-width-section">
+    <div class="result-inner">
+
+        <a class="back-link" href="{{ url_for('read_book', book=book) }}">← До тексту книги</a>
+
+        <h1>📖 {{ book }}</h1>
+        <p class="subtitle">
+            Уривок {{ num }} з {{ total }}: {{ excerpt_title }}
+            ({{ chapter_from }}:{{ verse_from }}–{{ chapter_to }}:{{ verse_to }})
+        </p>
+
+        <p class="intro-text">
+            Клікни на будь-яке слово, щоб обрати для нього колір і позначити ключовим —
+            усі однакові слова в цьому уривку одразу пофарбуються тим самим кольором.
+            Під кожною групою ключових слів праворуч зʼявиться поле для нотаток і висновку.
+        </p>
+
+        <div class="excerpt-nav">
+            {% if num > 1 %}
+            <a class="back-link" href="{{ url_for('read_excerpt', book=book, num=num-1) }}">← Попередній уривок</a>
+            {% else %}
+            <span></span>
+            {% endif %}
+
+            {% if num < total %}
+            <a class="back-link" href="{{ url_for('read_excerpt', book=book, num=num+1) }}">Наступний уривок →</a>
+            {% endif %}
+        </div>
+
+        <div id="read-status" class="intro-text">Завантажуємо текст уривку...</div>
+
+        <div class="split-layout">
+            <div class="text-panel">
+                <div id="result" class="clickable-text"></div>
+            </div>
+
+            <div class="notes-panel">
+                <div id="keyword-notes"></div>
+            </div>
+        </div>
+
+        <div class="excerpt-save-bar">
+            <div id="excerpt-notes-save-message" class="success-message" style="display:none"></div>
+            <div id="excerpt-notes-save-error" class="error-message" style="display:none"></div>
+
+            <button type="button" class="secondary-btn" onclick="saveExcerptProgress()">💾 Зберегти цей уривок</button>
+
+            {% if num < total %}
+            <button type="button" class="next-step-btn" onclick="saveAndGoNext()">Зберегти і перейти до наступного уривка →</button>
+            {% else %}
+            <button type="button" class="next-step-btn" onclick="saveAndFinish()">Зберегти і завершити дослідження книги ✓</button>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+<div class="loading-toast" id="loading-toast">
+    <div class="spinner" role="status" aria-label="loading">
+        <span class="sr-only">Завантаження...</span>
+    </div>
+    <p>Завантажуємо текст уривку...</p>
+</div>
+
+<script src="/static/script.js"></script>
+<script>
+    async function loadExcerpt(){
+        let toast = document.getElementById("loading-toast");
+        let status = document.getElementById("read-status");
+        let resultDiv = document.getElementById("result");
+
+        toast.classList.add("show");
+        resultDiv.innerHTML = "";
+
+        try {
+            let response = await fetch("{{ url_for('excerpt_text', book=book, num=num) }}");
+            let data = await response.json();
+
+            if(!response.ok || data.error){
+                status.textContent = data.error || "Не вдалося завантажити текст уривку";
+                toast.classList.remove("show");
+                return;
+            }
+
+            let frag = document.createDocumentFragment();
+
+            data.chapters.forEach(ch => {
+                let heading = document.createElement("h2");
+                heading.className = "chapter-heading";
+                heading.textContent = "Розділ " + ch.chapter;
+                frag.appendChild(heading);
+
+                ch.verses.forEach(v => {
+                    let line = document.createElement("div");
+                    line.className = "verse-line";
+                    line.innerHTML = `<span class="verse-num">${v.number}.</span>` + highlightWords(v.text);
+                    frag.appendChild(line);
+                });
+            });
+
+            resultDiv.appendChild(frag);
+            buildWordIndex();
+            status.style.display = "none";
+
+        } catch (err) {
+            status.textContent = "Помилка з'єднання із сервером. Спробуйте ще раз.";
+        }
+
+        toast.classList.remove("show");
+    }
+
+    loadExcerpt();
+
+    function excerptSavePayload(){
+        return {
+            keywords: window.__keywords || {},
+            notes: window.__notes || {},
+            conclusions: window.__conclusions || {}
+        };
+    }
+
+    async function saveExcerptProgress(silent){
+        let msgEl = document.getElementById("excerpt-notes-save-message");
+        let errEl = document.getElementById("excerpt-notes-save-error");
+        if(msgEl) msgEl.style.display = "none";
+        if(errEl) errEl.style.display = "none";
+
+        try {
+            let response = await fetch("{{ url_for('save_excerpt_notes', book=book, num=num) }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(excerptSavePayload())
+            });
+
+            let data = await response.json();
+
+            if(!response.ok){
+                if(errEl){
+                    errEl.textContent = data.error || "Не вдалося зберегти уривок";
+                    errEl.style.display = "block";
+                }
+                return false;
+            }
+
+            if(!silent && msgEl){
+                msgEl.textContent = data.message;
+                msgEl.style.display = "block";
+            }
+
+            if(data.content){
+                downloadTextFile(data.filename, data.content);
+            }
+
+            return true;
+
+        } catch (err) {
+            if(errEl){
+                errEl.textContent = "Помилка з'єднання із сервером. Спробуйте ще раз.";
+                errEl.style.display = "block";
+            }
+            return false;
+        }
+    }
+
+    async function saveAndGoNext(){
+        let ok = await saveExcerptProgress(true);
+        if(ok){
+            {% if num < total %}
+            window.location.href = "{{ url_for('read_excerpt', book=book, num=num+1) }}";
+            {% endif %}
+        }
+    }
+
+    async function saveAndFinish(){
+        let ok = await saveExcerptProgress(true);
+        if(ok){
+            window.location.href = "{{ url_for('overview_book', book=book) }}";
+        }
+    }
+</script>
+
+</body>
+</html>
