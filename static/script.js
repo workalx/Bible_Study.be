@@ -2,7 +2,11 @@ function downloadTextFile(filename, content){
     // Ініціює звичайне завантаження файлу в браузері користувача (у папку
     // "Завантаження" на його пристрої) — без жодного запису на диск сервера.
     // Працює однаково і локально, і на реальному хостингу.
-    let blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    // На початку файлу додаємо UTF-8 BOM (керівний символ U+FEFF) — без нього
+    // прості текстові редактори (напр. Notepad) не завжди розпізнають
+    // кодування і показують українські літери "ієрогліфами" замість тексту.
+    let bom = String.fromCharCode(0xFEFF);
+    let blob = new Blob([bom + content], { type: "text/plain;charset=utf-8" });
     let url = URL.createObjectURL(blob);
     let a = document.createElement("a");
     a.href = url;
