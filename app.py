@@ -83,6 +83,29 @@ def excerpts_key(username, book):
     return f"{username}::{book}"
 
 
+def write_desktop_file(book, filename, content):
+    # Додатково намагаємось покласти той самий файл у папку
+    # "Дослідження {книга}" на робочому столі — зручно, коли застосунок
+    # запущено локально (тоді це справжній робочий стіл користувача).
+    # На хостингу "робочий стіл" належить серверу, а не відвідувачу сайту,
+    # тож там ця спроба або не спрацює, або нічого корисного не дасть —
+    # саме тому основним способом отримати файл лишається завантаження
+    # в браузері (він працює завжди, і локально, і на хостингу).
+    # encoding="utf-8-sig" додає BOM-мітку на початку файлу, щоб Notepad
+    # та інші прості редактори одразу розпізнавали UTF-8 і показували
+    # українські літери правильно, а не "ієрогліфами".
+    try:
+        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+        folder = os.path.join(desktop, f"Дослідження {book}")
+        os.makedirs(folder, exist_ok=True)
+        file_path = os.path.join(folder, filename)
+        with open(file_path, "w", encoding="utf-8-sig") as f:
+            f.write(content)
+        return True
+    except OSError:
+        return False
+
+
 def load_notes():
 
     if not os.path.exists(NOTES_FILE):
@@ -284,10 +307,16 @@ def save_overview(book):
         lines.append("")
 
     content = "\n".join(lines)
+    filename = "Загальний огляд книги.txt"
+    saved_locally = write_desktop_file(book, filename, content)
+
+    message = "Огляд книги збережено. Файл завантажується..."
+    if saved_locally:
+        message += f" Також покладено в папку «Дослідження {book}» на робочому столі."
 
     return jsonify({
-        "message": "Огляд книги збережено. Файл завантажується...",
-        "filename": "Загальний огляд книги.txt",
+        "message": message,
+        "filename": filename,
         "content": content
     })
 
@@ -350,10 +379,16 @@ def save_excerpts(book):
         rng = f"{ex['chapter_from']}:{ex['verse_from']}–{ex['chapter_to']}:{ex['verse_to']}"
         lines.append(f"{i}. {ex['title']} ({rng})")
     content = "\n".join(lines)
+    filename = "Тематичні уривки.txt"
+    saved_locally = write_desktop_file(book, filename, content)
+
+    message = f"Збережено уривків: {len(excerpts)}. Список завантажується файлом..."
+    if saved_locally:
+        message += f" Також покладено в папку «Дослідження {book}» на робочому столі."
 
     return jsonify({
-        "message": f"Збережено уривків: {len(excerpts)}. Список завантажується файлом...",
-        "filename": "Тематичні уривки.txt",
+        "message": message,
+        "filename": filename,
         "content": content,
         "excerpts": excerpts
     })
@@ -442,9 +477,14 @@ def save_excerpt_notes(book, num):
     safe_title = "".join(c for c in excerpt["title"] if c not in '\\/:*?"<>|').strip()
     safe_title = safe_title or f"уривок {num}"
     filename = f"Уривок {num} - {safe_title}.txt"
+    saved_locally = write_desktop_file(book, filename, content)
+
+    message = f"Уривок {num} збережено. Файл завантажується..."
+    if saved_locally:
+        message += f" Також покладено в папку «Дослідження {book}» на робочому столі."
 
     return jsonify({
-        "message": f"Уривок {num} збережено. Файл завантажується...",
+        "message": message,
         "filename": filename,
         "content": content,
         "is_last": num >= len(saved),
