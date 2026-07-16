@@ -1,0 +1,7 @@
+{
+  "admin": {
+    "password": "scrypt:32768:8:1$HrtMFwkzdYPQJ9bg$8ea041956704651275d8025f979bb077e6cd7dc2c88b751ddb378d287dddc7ed630e8fa3a58036fc35a2b23f7542b40f6b55e7b94301c279698c1311a4a03b55",
+    "registered_at": "2026-07-15T20:27:52.822062",
+    "last_login": "2026-07-15T20:38:13.101338"
+  }
+}
